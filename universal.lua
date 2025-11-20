@@ -7930,7 +7930,6 @@ run(function()
     local LocalPlayer = Players.LocalPlayer
     
     local Desync
-    local NetworkDesync
     local YLevelJitter
     local YLevelJitterIdleOnly
     local YLevelJitterAmount
@@ -7939,77 +7938,18 @@ run(function()
     local PosJitterAmount
     local PosJitterYLevel
     local VoidSpam
-    local NetworkJitter
     
     local connection
     local cameraPart
     local oldCFrame
     local oldVelocity
-
-    -- needed since you would have a seizure when turning it on lul
+    
     cameraPart = Instance.new("Part", Workspace)
     cameraPart.CastShadow = false
     cameraPart.Anchored = true
     cameraPart.CanCollide = false
     cameraPart.Transparency = 1
     cameraPart.Size = Vector3.new(1, 1, 1)
-    
-    local function setSleeping(part, value)
-        pcall(function()
-            sethiddenproperty(part, "NetworkIsSleeping", value)
-        end)
-    end
-    
-    local function isSleeping(part)
-        local success, result = pcall(function()
-            return gethiddenproperty(part, "NetworkIsSleeping")
-        end)
-        return success and result or false
-    end
-
-    local function networkDesyncLoop()
-        while Desync.Enabled and NetworkDesync.Enabled do
-            task.wait()
-            local character = LocalPlayer.Character
-            if not character then continue end
-            
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if not hrp then continue end
-            
-            local heartbeat = RunService.Heartbeat:Connect(function()
-                setSleeping(hrp, true)
-                task.wait()
-                setSleeping(hrp, false)
-                task.wait()
-                setSleeping(hrp, true)
-                task.wait()
-                setSleeping(hrp, true)
-                task.wait()
-                setSleeping(hrp, false)
-                task.wait()
-                setSleeping(hrp, false)
-                task.wait()
-            end)
-            
-            task.wait()
-            if heartbeat then
-                heartbeat:Disconnect()
-            end
-        end
-    end
-    
-    local function networkJitterLoop()
-        while Desync.Enabled and NetworkJitter.Enabled do
-            task.wait()
-            flags["network_desync_toggle"] = true
-            if not NetworkDesync.Enabled then
-                task.spawn(networkDesyncLoop)
-            end
-            task.wait(0.5)
-            flags["network_desync_toggle"] = false
-            task.wait(0.25)
-        end
-    end
     
     Desync = vape.Categories.Blatant:CreateModule({
         Name = 'Desync',
@@ -8018,8 +7958,10 @@ run(function()
                 connection = RunService.Heartbeat:Connect(function()
                     local character = LocalPlayer.Character
                     if not character then return end
+                    
                     local hrp = character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
+                    
                     oldCFrame = hrp.CFrame
                     oldVelocity = hrp.Velocity
                     
@@ -8073,14 +8015,6 @@ run(function()
                         hrp.Velocity = oldVelocity
                     end
                 end)
-                
-                if NetworkDesync.Enabled then
-                    task.spawn(networkDesyncLoop)
-                end
-                
-                if NetworkJitter.Enabled then
-                    task.spawn(networkJitterLoop)
-                end
             else
                 if connection then
                     connection:Disconnect()
@@ -8097,17 +8031,6 @@ run(function()
             end
         end,
         Tooltip = 'Various desync features to make you harder to hit'
-    })
-    
-    NetworkDesync = Desync:CreateToggle({
-        Name = 'Network Desync',
-        Default = false,
-        Function = function(callback)
-            if callback and Desync.Enabled then
-                task.spawn(networkDesyncLoop)
-            end
-        end,
-        Tooltip = 'Desync your hitbox using network manipulation'
     })
     
     YLevelJitter = Desync:CreateToggle({
@@ -8189,17 +8112,6 @@ run(function()
         Default = false,
         Function = function(callback) end,
         Tooltip = 'Teleports to void to confuse hitbox detection'
-    })
-    
-    NetworkJitter = Desync:CreateToggle({
-        Name = 'Network Jitter',
-        Default = false,
-        Function = function(callback)
-            if callback and Desync.Enabled then
-                task.spawn(networkJitterLoop)
-            end
-        end,
-        Tooltip = 'Alternates network desync for jittery effect'
     })
     
     LocalPlayer.CharacterAdded:Connect(function()
